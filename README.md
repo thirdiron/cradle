@@ -3,6 +3,9 @@ cradle
 
 A high-level, caching, CouchDB client for Node.js
 
+Forked to temporarily allow unvalidated certificates over https so we
+can test functionality while awaiting our certificate to get fixed
+
 introduction
 ------------
 
@@ -83,7 +86,9 @@ Note that you can also use `cradle.setup` to set a global configuration:
 
 ``` js
   var db = c.database('starwars');
-  db.create();
+  db.create(function(err){
+    /* do something if there's an error */
+  });
 ```
 
 #### checking for database existence ####
@@ -163,7 +168,7 @@ Lets suppose that you have a design document that you've created:
   db.save('_design/user', {
     views: {
       byUsername: {
-        map: 'function (doc) { if (doc.resource === 'User') { emit(doc.username, doc) } }'
+        map: 'function (doc) { if (doc.resource === "User") { emit(doc.username, doc) } }'
       }
     }
   });
@@ -357,8 +362,17 @@ To remove a document, you call the `remove()` method, passing the latest documen
   });
 ```
 
-
 If `remove` is called without a revision, and the document was recently fetched from the database, it will attempt to use the cached document's revision, providing caching is enabled.
+
+### update handlers ###
+
+Update handlers can be used by calling the `update()` method, specifying the update handler name, and optionally the document id, the query object and the document body object. Only the update handler name is a required function parameter. Note that CouchDB is able to parse query options only if the URI-encoded length is less than 8197 characters. Use the body parameter for larger objects.
+
+``` js
+  db.update('my_designdoc/update_handler_name', 'luke', undefined, { my_param: false }, function (err, res) {
+      // Handle the response, specified by the update handler
+  });
+```
 
 Connecting with authentication and SSL
 --------------------------------------
@@ -366,6 +380,15 @@ Connecting with authentication and SSL
 ``` js
   var connection = new(cradle.Connection)('https://couch.io', 443, {
       auth: { username: 'john', password: 'fha82l' }
+  });
+```
+
+or providing a self signed CA certificate
+
+``` js
+  var connection = new(cradle.Connection)('https://couch.io', 443, {
+      auth: { username: 'john', password: 'fha82l' },
+      ca: fs.readFileSync('path_to_self_signed_ca.crt')
   });
 ```
 
